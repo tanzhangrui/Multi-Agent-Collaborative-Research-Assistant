@@ -16,7 +16,7 @@ EventCallback = Callable[[Dict[str, Any]], Awaitable[None]]
 
 class AgentPipeline:
     """智能体协作管道 - 实现管道-过滤器风格的多智能体协作流程"""
-    
+
     def __init__(self):
         self.orchestrator = OrchestratorAgent()
         self.researcher = ResearcherAgent()
@@ -24,7 +24,7 @@ class AgentPipeline:
         self.writer = WriterAgent()
         self.reviewer = ReviewerAgent()
         self._running = False
-    
+
     async def emit_event(self, callback: Optional[EventCallback], event: Dict[str, Any]):
         """发送事件"""
         if callback:
@@ -46,23 +46,31 @@ class AgentPipeline:
             )
         except Exception as e:
             print(f"Message bus publish error in emit_event: {e}")
-    
-    async def execute(self, topic: str, session_id: str, event_callback: Optional[EventCallback] = None) -> Dict[str, Any]:
-        """执行完整的多智能体协作流程，通过event_callback实时推送进度"""
+
+    async def execute(self, topic: str, session_id: str, event_callback: Optional[EventCallback] = None, mode: str = "standard") -> Dict[str, Any]:
+        """执行完整的多智能体协作流程，通过event_callback实时推送进度
+
+        Args:
+            topic: 研究主题
+            session_id: 会话ID
+            event_callback: 事件回调函数
+            mode: 研究模式 - "quick"(快速), "standard"(标准), "deep"(深度)
+        """
         self._running = True
         task = task_manager.create_task(topic=topic, session_id=session_id)
-        
+
         try:
             # 流程开始
             await self.emit_event(event_callback, {
                 "type": "pipeline_start",
                 "topic": topic,
                 "task_id": task.task_id,
-                "message": f"开始研究：{topic}",
+                "mode": mode,
+                "message": f"开始研究：{topic}（{mode}模式）",
                 "progress": 0.0,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
             # 阶段1：编排器 - 任务分解
             await self.emit_event(event_callback, {
                 "type": "agent_start",
@@ -74,10 +82,10 @@ class AgentPipeline:
                 "progress": 0.05,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
             orchestration_result = await self.orchestrator.execute(topic)
             task_plan = json.loads(orchestration_result)
-            
+
             await self.emit_event(event_callback, {
                 "type": "agent_output",
                 "agent_type": "orchestrator",
@@ -88,78 +96,130 @@ class AgentPipeline:
                 "progress": 0.2,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
             if not self._running:
                 return {"status": "cancelled"}
-            
-            # 阶段2：研究员 - 信息收集
-            await self.emit_event(event_callback, {
-                "type": "agent_start",
-                "agent_type": "researcher",
-                "agent_name": "研究员",
-                "step": 2,
-                "description": "收集和整理研究信息",
-                "message": "研究员正在收集信息...",
-                "progress": 0.2,
-                "timestamp": datetime.now().isoformat(),
-            })
-            
-            research_result = await self.researcher.execute(
-                topic,
-                context={
-                    "research_focus": task_plan.get("research_focus", topic),
-                    "analysis_dimensions": task_plan.get("analysis_dimensions", []),
-                }
-            )
-            
-            await self.emit_event(event_callback, {
-                "type": "agent_output",
-                "agent_type": "researcher",
-                "agent_name": "研究员",
-                "step": 2,
-                "output": research_result,
-                "message": "信息收集完成",
-                "progress": 0.4,
-                "timestamp": datetime.now().isoformat(),
-            })
-            
-            if not self._running:
-                return {"status": "cancelled"}
-            
-            # 阶段3：分析师 - 深度分析
-            await self.emit_event(event_callback, {
-                "type": "agent_start",
-                "agent_type": "analyst",
-                "agent_name": "分析师",
-                "step": 3,
-                "description": "深度分析与洞察提取",
-                "message": "分析师正在进行深度分析...",
-                "progress": 0.4,
-                "timestamp": datetime.now().isoformat(),
-            })
-            
-            analysis_result = await self.analyst.execute(
-                topic,
-                context={
-                    "research_data": research_result,
-                    "analysis_dimensions": task_plan.get("analysis_dimensions", []),
-                }
-            )
-            
-            await self.emit_event(event_callback, {
-                "type": "agent_output",
-                "agent_type": "analyst",
-                "agent_name": "分析师",
-                "step": 3,
-                "output": analysis_result,
-                "message": "深度分析完成",
-                "progress": 0.6,
-                "timestamp": datetime.now().isoformat(),
-            })
-            
-            if not self._running:
-                return {"status": "cancelled"}
-            
+
+            # 快速模式：跳过研究员和分析师，直接写作
+            if mode == "quick":
+                research_result = ""
+                analysis_result = ""
+            else:
+                # 阶段2：研究员 - 信息收集（Map-Reduce并行模式，仅深度模式启用并行）
+                dimensions = task_plan.get("analysis_dimensions", [])
+
+                if mode == "deep" and len(dimensions) >= 2:
+                    # Map阶段：并行研究各个维度
+                    await self.emit_event(event_callback, {
+                        "type": "agent_start",
+                        "agent_type": "researcher",
+                        "agent_name": "研究员",
+                        "step": 2,
+                        "description": f"并行研究{len(dimensions)}个维度",
+                        "message": f"研究员正在并行研究{len(dimensions)}个维度...",
+                        "progress": 0.2,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                    # 并行执行研究任务
+                    async def research_dimension(dim):
+                        result = await self.researcher.execute(
+                            topic,
+                            context={
+                                "research_focus": f"{topic} - {dim}",
+                                "analysis_dimensions": [dim],
+                            }
+                        )
+                        return (dim, result)
+
+                    research_tasks = [research_dimension(dim) for dim in dimensions]
+                    research_results = await asyncio.gather(*research_tasks)
+
+                    # Reduce阶段：汇总研究结果
+                    research_parts = []
+                    for dim, result in research_results:
+                        research_parts.append(f"## {dim}\n\n{result}")
+                    research_result = f"# {topic} 综合研究\n\n" + "\n\n".join(research_parts)
+
+                    await self.emit_event(event_callback, {
+                        "type": "agent_output",
+                        "agent_type": "researcher",
+                        "agent_name": "研究员",
+                        "step": 2,
+                        "output": research_result,
+                        "message": f"并行研究完成，已汇总{len(dimensions)}个维度",
+                        "progress": 0.4,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+                else:
+                    # 单维度或标准模式，直接研究
+                    await self.emit_event(event_callback, {
+                        "type": "agent_start",
+                        "agent_type": "researcher",
+                        "agent_name": "研究员",
+                        "step": 2,
+                        "description": "收集和整理研究信息",
+                        "message": "研究员正在收集信息...",
+                        "progress": 0.2,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                    research_result = await self.researcher.execute(
+                        topic,
+                        context={
+                            "research_focus": task_plan.get("research_focus", topic),
+                            "analysis_dimensions": dimensions,
+                        }
+                    )
+
+                    await self.emit_event(event_callback, {
+                        "type": "agent_output",
+                        "agent_type": "researcher",
+                        "agent_name": "研究员",
+                        "step": 2,
+                        "output": research_result,
+                        "message": "信息收集完成",
+                        "progress": 0.4,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                if not self._running:
+                    return {"status": "cancelled"}
+
+                # 阶段3：分析师 - 深度分析
+                await self.emit_event(event_callback, {
+                    "type": "agent_start",
+                    "agent_type": "analyst",
+                    "agent_name": "分析师",
+                    "step": 3,
+                    "description": "深度分析与洞察提取",
+                    "message": "分析师正在进行深度分析...",
+                    "progress": 0.4,
+                    "timestamp": datetime.now().isoformat(),
+                })
+
+                analysis_result = await self.analyst.execute(
+                    topic,
+                    context={
+                        "research_data": research_result,
+                        "analysis_dimensions": task_plan.get("analysis_dimensions", []),
+                    }
+                )
+
+                await self.emit_event(event_callback, {
+                    "type": "agent_output",
+                    "agent_type": "analyst",
+                    "agent_name": "分析师",
+                    "step": 3,
+                    "output": analysis_result,
+                    "message": "深度分析完成",
+                    "progress": 0.6,
+                    "timestamp": datetime.now().isoformat(),
+                })
+
+                if not self._running:
+                    return {"status": "cancelled"}
+
             # 阶段4：写作员 - 报告撰写
             await self.emit_event(event_callback, {
                 "type": "agent_start",
@@ -171,7 +231,7 @@ class AgentPipeline:
                 "progress": 0.6,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
             report = await self.writer.execute(
                 topic,
                 context={
@@ -180,7 +240,7 @@ class AgentPipeline:
                     "writing_requirements": task_plan.get("writing_requirements", ""),
                 }
             )
-            
+
             await self.emit_event(event_callback, {
                 "type": "agent_output",
                 "agent_type": "writer",
@@ -191,10 +251,10 @@ class AgentPipeline:
                 "progress": 0.8,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
             if not self._running:
                 return {"status": "cancelled"}
-            
+
             # 阶段5：审查员 - 质量审查
             await self.emit_event(event_callback, {
                 "type": "agent_start",
@@ -206,7 +266,7 @@ class AgentPipeline:
                 "progress": 0.8,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
             review_result = await self.reviewer.execute(
                 topic,
                 context={
@@ -215,7 +275,7 @@ class AgentPipeline:
                 }
             )
             review_data = json.loads(review_result)
-            
+
             await self.emit_event(event_callback, {
                 "type": "agent_output",
                 "agent_type": "reviewer",
@@ -226,19 +286,131 @@ class AgentPipeline:
                 "progress": 1.0,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
+            # 反思循环：如果审查评分低于阈值，触发写作员重写（仅深度模式启用）
+            if mode == "deep":
+                REFLECTION_THRESHOLD = 80
+                MAX_REFLECTION_ROUNDS = 2
+
+                reflection_round = 0
+                current_report = report
+                current_review = review_data
+
+                while current_review.get("total_score", 0) < REFLECTION_THRESHOLD and reflection_round < MAX_REFLECTION_ROUNDS:
+                    reflection_round += 1
+
+                    await self.emit_event(event_callback, {
+                        "type": "reflection_start",
+                        "agent_type": "reviewer",
+                        "agent_name": "审查员",
+                        "step": 5,
+                        "round": reflection_round,
+                        "message": f"评分{current_review.get('total_score')}分低于{REFLECTION_THRESHOLD}分阈值，启动第{reflection_round}轮反思优化...",
+                        "progress": 0.85,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                    # 写作员根据审查反馈重写
+                    await self.emit_event(event_callback, {
+                        "type": "agent_start",
+                        "agent_type": "writer",
+                        "agent_name": "写作员",
+                        "step": 4,
+                        "round": reflection_round,
+                        "description": f"根据审查反馈优化报告（第{reflection_round}轮）",
+                        "message": f"写作员正在根据审查反馈优化报告（第{reflection_round}轮）...",
+                        "progress": 0.88,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                    # 构建反思提示
+                    weaknesses = "\n".join([f"- {w}" for w in current_review.get("weaknesses", [])])
+                    suggestions = "\n".join([f"- {s}" for s in current_review.get("suggestions", [])])
+                    overall_comment = current_review.get("overall_comment", "")
+
+                    current_report = await self.writer.execute(
+                        topic,
+                        context={
+                            "research_data": research_result,
+                            "analysis_data": analysis_result,
+                            "writing_requirements": f"""请根据以下审查反馈优化报告：
+
+## 审查总体评价
+{overall_comment}
+
+## 不足之处
+{weaknesses}
+
+## 改进建议
+{suggestions}
+
+请针对以上问题，对报告进行针对性修改和优化。保持原有结构的基础上，重点改进审查中指出的不足。""",
+                        }
+                    )
+
+                    await self.emit_event(event_callback, {
+                        "type": "agent_output",
+                        "agent_type": "writer",
+                        "agent_name": "写作员",
+                        "step": 4,
+                        "round": reflection_round,
+                        "output": current_report,
+                        "message": f"报告优化完成（第{reflection_round}轮）",
+                        "progress": 0.92,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                    # 审查员重新评估
+                    await self.emit_event(event_callback, {
+                        "type": "agent_start",
+                        "agent_type": "reviewer",
+                        "agent_name": "审查员",
+                        "step": 5,
+                        "round": reflection_round,
+                        "description": f"重新评估优化后的报告（第{reflection_round}轮）",
+                        "message": f"审查员正在重新评估优化后的报告（第{reflection_round}轮）...",
+                        "progress": 0.95,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                    new_review_result = await self.reviewer.execute(
+                        topic,
+                        context={
+                            "report": current_report,
+                            "quality_criteria": task_plan.get("quality_criteria", ""),
+                        }
+                    )
+                    current_review = json.loads(new_review_result)
+
+                    await self.emit_event(event_callback, {
+                        "type": "agent_output",
+                        "agent_type": "reviewer",
+                        "agent_name": "审查员",
+                        "step": 5,
+                        "round": reflection_round,
+                        "output": current_review,
+                        "message": f"第{reflection_round}轮审查完成，评分: {current_review.get('total_score', 'N/A')}/100",
+                        "progress": 0.98,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                # 使用最终优化后的报告和审查结果
+                report = current_report
+                review_data = current_review
+
             # 流程完成
             result = {
                 "status": "completed",
                 "task_id": task.task_id,
                 "topic": topic,
+                "mode": mode,
                 "task_plan": task_plan,
                 "research_result": research_result,
                 "analysis_result": analysis_result,
                 "report": report,
                 "review": review_data,
             }
-            
+
             await self.emit_event(event_callback, {
                 "type": "pipeline_complete",
                 "result": result,
@@ -246,9 +418,9 @@ class AgentPipeline:
                 "progress": 1.0,
                 "timestamp": datetime.now().isoformat(),
             })
-            
+
             return result
-        
+
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -266,7 +438,7 @@ class AgentPipeline:
             }
         finally:
             self._running = False
-    
+
     def cancel(self):
         """取消当前流程"""
         self._running = False

@@ -400,7 +400,41 @@ body {
 .flow-msg-text { color: var(--text-secondary); }
 .flow-msg-time { font-size: 8px; color: var(--text-muted); flex-shrink: 0; }
 
-/* ========== 响应式 ========== */
+/* 模式选择器 */
+.mode-selector {
+  display: flex; gap: 6px; padding: 0 6px; align-items: center;
+}
+.mode-btn {
+  padding: 4px 10px; border-radius: 8px; font-size: 11px; cursor: pointer;
+  background: var(--bg-tertiary); border: 1px solid var(--border-color);
+  color: var(--text-muted); transition: var(--transition); white-space: nowrap;
+}
+.mode-btn:hover { border-color: var(--accent-blue); color: var(--text-secondary); }
+.mode-btn.active { background: rgba(59,130,246,0.15); border-color: var(--accent-blue); color: var(--accent-blue); }
+.mode-btn .mode-icon { margin-right: 3px; }
+
+/* 反思循环动画 */
+.reflection-banner {
+  background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.1));
+  border: 1px solid rgba(245,158,11,0.3); border-radius: var(--radius-sm);
+  padding: 10px 14px; margin-bottom: 10px; animation: fadeIn 0.4s ease;
+  display: flex; align-items: center; gap: 8px;
+}
+.reflection-banner .ref-icon { font-size: 18px; animation: spin 2s linear infinite; }
+.reflection-banner .ref-text { font-size: 12px; color: var(--accent-orange); }
+.reflection-banner .ref-round { font-weight: 700; color: var(--accent-red); }
+
+/* 并行研究指示器 */
+.parallel-indicator {
+  background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3);
+  border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 8px;
+  animation: fadeIn 0.3s ease; font-size: 11px; color: var(--accent-cyan);
+  display: flex; align-items: center; gap: 6px;
+}
+.parallel-indicator .par-icon { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* 响应式 */
 @media (max-width: 1200px) { .detail { display: none; } }
 @media (max-width: 900px) { .sidebar { display: none; } }
   </style>
@@ -445,6 +479,11 @@ body {
       <div class="input-area">
         <div class="input-box">
           <textarea id="inputText" placeholder="输入研究主题，多个智能体将协作完成深度研究报告..." rows="1"></textarea>
+          <div class="mode-selector">
+            <button class="mode-btn active" data-mode="standard" onclick="setMode('standard')"><span class="mode-icon">⚡</span>标准</button>
+            <button class="mode-btn" data-mode="quick" onclick="setMode('quick')"><span class="mode-icon">🚀</span>快速</button>
+            <button class="mode-btn" data-mode="deep" onclick="setMode('deep')"><span class="mode-icon">🔬</span>深度</button>
+          </div>
           <div class="input-actions">
             <button class="cancel-btn" id="cancelBtn" style="display:none" onclick="cancelTask()">取消</button>
             <button class="send-btn" id="sendBtn" onclick="handleSend()">
@@ -507,6 +546,16 @@ let ws = null;
 let flowMessages = [];
 let currentTask = null;
 let workflowCards = {};
+let currentMode = 'standard'; // quick / standard / deep
+let reflectionRound = 0;
+
+// ========== 模式选择 ==========
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+}
 
 // ========== 初始化 ==========
 function init() {
@@ -683,25 +732,25 @@ function updateDetail(task) {
 }
 
 // ========== 工作流卡片 ==========
-function createWorkflowCard(agentType, agentName, description) {
-  const a = AGENTS.find(x => x.type === agentType) || { icon:'🤖', color:'#666' };
-  const id = 'wf-' + agentType;
+function createWorkflowCard(cardId, agentName, description, agentType) {
+  const a = AGENTS.find(x => x.type === (agentType || cardId)) || { icon:'🤖', color:'#666' };
+  const id = 'wf-' + cardId;
   const html = `<div class="workflow-card active" id="${id}">
-    <div class="workflow-card-header" onclick="toggleWfCard('${agentType}')">
+    <div class="workflow-card-header" onclick="toggleWfCard('${cardId}')">
       <div class="wf-avatar" style="background:${a.color}">${a.icon}</div>
       <div class="wf-info">
         <div class="wf-name">${agentName}</div>
-        <div class="wf-status" id="wf-status-${agentType}">${description}</div>
+        <div class="wf-status" id="wf-status-${cardId}">${description}</div>
       </div>
-      <div class="wf-spinner" id="wf-spinner-${agentType}"></div>
-      <span class="wf-expand" id="wf-expand-${agentType}">▼</span>
+      <div class="wf-spinner" id="wf-spinner-${cardId}"></div>
+      <span class="wf-expand" id="wf-expand-${cardId}">▼</span>
     </div>
-    <div class="workflow-card-body open" id="wf-body-${agentType}">
-      <div class="wf-output" id="wf-output-${agentType}"><span style="color:var(--text-muted)">工作中...</span></div>
+    <div class="workflow-card-body open" id="wf-body-${cardId}">
+      <div class="wf-output" id="wf-output-${cardId}"><span style="color:var(--text-muted)">工作中...</span></div>
     </div>
   </div>`;
   addMsg(html);
-  workflowCards[agentType] = true;
+  workflowCards[cardId] = true;
 }
 
 function updateWorkflowOutput(agentType, output) {
@@ -750,7 +799,7 @@ async function sendMessage(text) {
     const response = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg, session_id: 'web_' + Date.now() }),
+      body: JSON.stringify({ message: msg, session_id: 'web_' + Date.now(), mode: currentMode }),
     });
 
     const reader = response.body.getReader();
@@ -811,6 +860,9 @@ function handleEvent(event) {
   switch (type) {
     case 'pipeline_start':
       addFlowMsg({ agent_type:'orchestrator', agent_name:'系统', content: event.message, timestamp: event.timestamp });
+      // 显示模式标签
+      const modeLabels = { quick:'🚀 快速模式', standard:'⚡ 标准模式', deep:'🔬 深度模式' };
+      addMsg(`<div class="parallel-indicator"><span class="par-icon">📌</span> ${modeLabels[currentMode] || '标准模式'} — ${event.message}</div>`);
       break;
 
     case 'agent_start':
@@ -819,22 +871,37 @@ function handleEvent(event) {
       if (stepIdx >= 0) { currentStep = stepIdx; renderFlowSteps(); }
       // 更新智能体状态
       updateAgent(agentType, { status:'working', task: event.description || event.message, progress: event.progress || 0 });
-      // 创建工作流卡片
-      createWorkflowCard(agentType, event.agent_name, event.description || event.message);
+      // 创建工作流卡片（如果是反思轮次，使用不同ID）
+      const cardId = event.round ? `${agentType}-r${event.round}` : agentType;
+      const roundLabel = event.round ? ` (第${event.round}轮优化)` : '';
+      createWorkflowCard(cardId, event.agent_name + roundLabel, event.description || event.message, agentType);
       addFlowMsg({ agent_type: agentType, agent_name: event.agent_name, content: event.message, timestamp: event.timestamp });
       break;
 
     case 'agent_output':
       // 更新工作流卡片输出
-      updateWorkflowOutput(agentType, event.output);
+      const outId = event.round ? `${event.agent_type}-r${event.round}` : event.agent_type;
+      updateWorkflowOutput(outId, event.output);
       // 完成卡片
-      completeWorkflowCard(agentType, event.message);
-      updateAgent(agentType, { status:'completed', task:null, progress: event.progress || 1 });
-      addFlowMsg({ agent_type: agentType, agent_name: event.agent_name, content: event.message, timestamp: event.timestamp });
+      completeWorkflowCard(outId, event.message);
+      updateAgent(event.agent_type, { status:'completed', task:null, progress: event.progress || 1 });
+      addFlowMsg({ agent_type: event.agent_type, agent_name: event.agent_name, content: event.message, timestamp: event.timestamp });
+      break;
+
+    case 'reflection_start':
+      reflectionRound = event.round || 1;
+      addMsg(`<div class="reflection-banner">
+        <span class="ref-icon">🔄</span>
+        <span class="ref-text">评分未达阈值，启动<span class="ref-round">第${reflectionRound}轮反思优化</span> — ${event.message}</span>
+      </div>`);
+      addFlowMsg({ agent_type: event.agent_type, agent_name: event.agent_name, content: `🔄 ${event.message}`, timestamp: event.timestamp });
       break;
 
     case 'pipeline_complete':
       addFlowMsg({ agent_type:'orchestrator', agent_name:'系统', content: '✅ ' + event.message, timestamp: event.timestamp });
+      if (reflectionRound > 0) {
+        addMsg(`<div class="parallel-indicator"><span class="par-icon">✨</span> 经过${reflectionRound}轮反思优化，报告质量已提升</div>`);
+      }
       break;
 
     case 'pipeline_error':

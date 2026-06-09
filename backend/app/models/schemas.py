@@ -30,9 +30,16 @@ class MessageType(str, Enum):
     SYSTEM = "system"
 
 
+class ResearchMode(str, Enum):
+    QUICK = "quick"          # 快速研究：2个智能体（编排+写作）
+    STANDARD = "standard"    # 标准研究：5个智能体全流程
+    DEEP = "deep"            # 深度研究：5个智能体 + 反思闭环 + 并行研究
+
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = None
+    mode: Optional[ResearchMode] = ResearchMode.STANDARD
 
 
 class AgentMessage(BaseModel):

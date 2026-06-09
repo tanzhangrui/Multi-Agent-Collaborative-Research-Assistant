@@ -7,6 +7,7 @@ from app.models.schemas import ChatRequest
 from app.agents.pipeline import agent_pipeline
 from app.core.message_bus import message_bus
 from app.core.task_manager import task_manager
+from app.core.guardrails import validate_input
 
 router = APIRouter()
 
@@ -17,10 +18,17 @@ research_history: list = []
 @router.post("/api/chat")
 async def chat(request: ChatRequest):
     """处理用户聊天请求 - 非流式版本"""
+    # 输入安全护栏
+    is_valid, error_msg = await validate_input(request.message)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
+        mode = request.mode.value if request.mode else "standard"
         result = await agent_pipeline.execute(
             topic=request.message,
             session_id=request.session_id or "default",
+            mode=mode,
         )
         
         if result.get("status") == "error":
@@ -63,7 +71,14 @@ async def chat(request: ChatRequest):
 @router.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):
     """SSE流式推送 - 实时展示智能体工作过程"""
-    
+
+    # 输入安全护栏
+    is_valid, error_msg = await validate_input(request.message)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
+    mode = request.mode.value if request.mode else "standard"
+
     async def event_generator():
         queue = asyncio.Queue()
         
@@ -76,6 +91,7 @@ async def chat_stream(request: ChatRequest):
                 topic=request.message,
                 session_id=request.session_id or "default",
                 event_callback=on_event,
+                mode=mode,
             )
             # 保存到历史
             if result.get("status") == "completed":
