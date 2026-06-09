@@ -42,16 +42,19 @@ class BaseAgent(ABC):
     async def _update_status(self, status: AgentStatus, message: str = ""):
         """更新智能体状态并广播"""
         self.status = status
-        await message_bus.publish(
-            f"agent_{self.agent_type.value}",
-            AgentMessage(
-                agent_type=self.agent_type,
-                agent_name=self.name,
-                message_type=MessageType.PROGRESS,
-                content=message or f"{self.name} 状态变更为 {status.value}",
-                metadata={"status": status.value, "progress": self.progress},
+        try:
+            await message_bus.publish(
+                f"agent_{self.agent_type.value}",
+                AgentMessage(
+                    agent_type=self.agent_type,
+                    agent_name=self.name,
+                    message_type=MessageType.PROGRESS,
+                    content=message or f"{self.name} 状态变更为 {status.value}",
+                    metadata={"status": status.value, "progress": self.progress},
+                )
             )
-        )
+        except Exception as e:
+            print(f"Message bus publish error in _update_status: {e}")
 
     async def _think(self, prompt: str, temperature: float = 0.7) -> str:
         """调用LLM进行思考"""
@@ -64,12 +67,15 @@ class BaseAgent(ABC):
 
     async def _publish_result(self, content: str, message_type: MessageType = MessageType.TASK_RESULT):
         """发布任务结果"""
-        await message_bus.publish(
-            "task_results",
-            AgentMessage(
-                agent_type=self.agent_type,
-                agent_name=self.name,
-                message_type=message_type,
-                content=content,
+        try:
+            await message_bus.publish(
+                "task_results",
+                AgentMessage(
+                    agent_type=self.agent_type,
+                    agent_name=self.name,
+                    message_type=message_type,
+                    content=content,
+                )
             )
-        )
+        except Exception as e:
+            print(f"Message bus publish error in _publish_result: {e}")

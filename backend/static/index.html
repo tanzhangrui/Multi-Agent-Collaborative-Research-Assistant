@@ -5,619 +5,633 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>多智能体协作研究助手</title>
   <style>
-/* ========== 全局样式 ========== */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
+/* ========== CSS变量 ========== */
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-card: #1e293b;
-  --text-primary: #f1f5f9;
+  --bg-primary: #0a0f1e;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --bg-card: #151d2e;
+  --bg-hover: #1a2540;
+  --text-primary: #f0f4fc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --border-color: #334155;
+  --border-color: #1e2d4a;
+  --border-active: #3b82f6;
   --accent-blue: #3b82f6;
   --accent-purple: #8b5cf6;
   --accent-green: #10b981;
   --accent-orange: #f59e0b;
   --accent-red: #ef4444;
   --accent-indigo: #6366f1;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --accent-cyan: #06b6d4;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
+  --shadow-glow-blue: 0 0 20px rgba(59,130,246,0.15);
+  --shadow-glow-purple: 0 0 20px rgba(139,92,246,0.15);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
   height: 100vh;
 }
 
-.app-container { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-/* ========== 顶部导航 ========== */
-.app-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 24px; background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color); flex-shrink: 0; z-index: 10;
-}
-.logo { display: flex; align-items: center; gap: 12px; }
-.logo-icon { font-size: 28px; }
-.logo-text h1 {
-  font-size: 18px; font-weight: 700;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.subtitle { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; }
-.status-indicator {
-  display: flex; align-items: center; gap: 6px; font-size: 12px;
-  color: var(--text-muted); padding: 4px 12px; background: var(--bg-tertiary); border-radius: 20px;
-}
-.status-indicator.connected { color: var(--accent-green); }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
-.status-indicator.connected .status-dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
-
-/* ========== 主内容区 ========== */
-.main-content { display: flex; flex: 1; overflow: hidden; }
-
-/* ========== 左侧智能体面板 ========== */
-.agent-panel {
-  width: 280px; background: var(--bg-secondary); border-right: 1px solid var(--border-color);
-  display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0;
-}
-.panel-title {
-  font-size: 14px; font-weight: 600; padding: 16px;
-  color: var(--text-primary); border-bottom: 1px solid var(--border-color);
-}
-.panel-subtitle { font-size: 12px; font-weight: 600; padding: 12px 16px 8px; color: var(--text-secondary); }
-.agent-list { padding: 8px; }
-.agent-card {
-  display: flex; align-items: flex-start; gap: 10px; padding: 10px;
-  border-radius: var(--radius-sm); margin-bottom: 4px; transition: all 0.3s ease; background: transparent;
-}
-.agent-card.active { background: var(--bg-tertiary); }
-.agent-avatar {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
-}
-.agent-info { flex: 1; min-width: 0; }
-.agent-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-.agent-status { margin-bottom: 4px; }
-.status-badge {
-  font-size: 10px; padding: 1px 8px; border-radius: 10px;
-  background: var(--bg-tertiary); color: var(--text-muted);
-}
-.status-badge.thinking { background: rgba(99,102,241,0.2); color: var(--accent-indigo); }
-.status-badge.working { background: rgba(59,130,246,0.2); color: var(--accent-blue); }
-.status-badge.completed { background: rgba(16,185,129,0.2); color: var(--accent-green); }
-.status-badge.error { background: rgba(239,68,68,0.2); color: var(--accent-red); }
-.agent-task { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.agent-progress { display: flex; align-items: center; gap: 6px; }
-.progress-bar { flex: 1; height: 4px; background: var(--bg-primary); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 2px; transition: width 0.5s ease; }
-.progress-text { font-size: 10px; color: var(--text-muted); min-width: 30px; }
-
-/* 流程可视化 */
-.pipeline-visual { border-top: 1px solid var(--border-color); padding-bottom: 16px; }
-.pipeline-steps { padding: 0 16px; }
-.pipeline-step { display: flex; align-items: center; gap: 10px; padding: 6px 0; position: relative; }
-.step-number {
-  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; font-size: 11px; font-weight: 600;
-  background: var(--bg-tertiary); color: var(--text-muted); flex-shrink: 0; transition: all 0.3s ease;
-}
-.pipeline-step.active .step-number { background: var(--accent-blue); color: white; }
-.pipeline-step.completed .step-number { background: var(--accent-green); color: white; }
-.pipeline-step.current .step-number { background: var(--accent-blue); color: white; box-shadow: 0 0 12px rgba(59,130,246,0.5); animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100%{box-shadow:0 0 12px rgba(59,130,246,0.5)} 50%{box-shadow:0 0 20px rgba(59,130,246,0.8)} }
-.step-info { flex: 1; }
-.step-name { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.pipeline-step.active .step-name { color: var(--text-primary); }
-.step-desc { font-size: 10px; color: var(--text-muted); }
-.step-connector { position: absolute; left: 27px; top: 30px; width: 2px; height: 12px; background: var(--border-color); }
-.pipeline-step.completed .step-connector { background: var(--accent-green); }
-
-/* ========== 中间聊天区域 ========== */
-.chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-.chat-messages { flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth; }
-
-/* 欢迎页 */
-.welcome-section { text-align: center; padding: 40px 20px; max-width: 700px; margin: 0 auto; }
-.welcome-icon { font-size: 48px; margin-bottom: 16px; }
-.welcome-section h2 {
-  font-size: 22px; margin-bottom: 8px;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.welcome-section > p { color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; }
-.feature-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 32px; }
-.feature-card {
-  background: var(--bg-secondary); border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm); padding: 16px 12px; text-align: center; transition: all 0.3s ease;
-}
-.feature-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
-.feature-icon { font-size: 24px; display: block; margin-bottom: 8px; }
-.feature-card h3 { font-size: 12px; margin-bottom: 4px; }
-.feature-card p { font-size: 10px; color: var(--text-muted); }
-.example-prompts { text-align: center; }
-.example-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
-.example-btn {
-  display: inline-block; padding: 6px 14px; margin: 4px; background: var(--bg-secondary);
-  border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-secondary);
-  font-size: 12px; cursor: pointer; transition: all 0.2s ease;
-}
-.example-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: rgba(59,130,246,0.1); }
-
-/* 消息样式 */
-.message { margin-bottom: 16px; }
-.message-content { display: flex; gap: 10px; align-items: flex-start; }
-.message-avatar {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
-}
-.user-avatar { background: var(--accent-purple); }
-.message-bubble { max-width: 80%; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.6; }
-.user-message { flex-direction: row-reverse; }
-.user-message .message-bubble { background: var(--accent-blue); color: white; border-bottom-right-radius: 4px; }
-.progress-bubble { background: var(--bg-tertiary); border-left: 3px solid var(--accent-blue); }
-.agent-label { font-size: 11px; font-weight: 600; color: var(--accent-blue); margin-bottom: 2px; }
-.progress-bubble .message-text { font-size: 12px; color: var(--text-secondary); }
-
-/* 报告样式 */
-.report-message { flex-direction: column; }
-.report-header {
-  display: flex; align-items: center; gap: 8px; padding: 12px 16px;
-  background: var(--bg-secondary); border-radius: var(--radius) var(--radius) 0 0;
-  border: 1px solid var(--border-color); border-bottom: none;
-}
-.report-icon { font-size: 20px; }
-.report-header h3 { flex: 1; font-size: 15px; }
-.report-score { font-size: 14px; font-weight: 700; padding: 2px 10px; border-radius: 12px; }
-.score-high { background: rgba(16,185,129,0.2); color: var(--accent-green); }
-.score-medium { background: rgba(245,158,11,0.2); color: var(--accent-orange); }
-.score-low { background: rgba(239,68,68,0.2); color: var(--accent-red); }
-
-.report-body {
-  padding: 20px; background: var(--bg-secondary);
-  border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);
-  font-size: 13px; line-height: 1.8; max-height: 500px; overflow-y: auto;
-}
-.report-body h1,.report-body h2,.report-body h3,.report-body h4 { margin: 16px 0 8px; color: var(--text-primary); }
-.report-body h1 { font-size: 18px; }
-.report-body h2 { font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
-.report-body h3 { font-size: 14px; }
-.report-body p { margin: 8px 0; color: var(--text-secondary); }
-.report-body ul,.report-body ol { padding-left: 20px; margin: 8px 0; }
-.report-body li { margin: 4px 0; color: var(--text-secondary); }
-.report-body strong { color: var(--text-primary); }
-.report-body code { background: var(--bg-tertiary); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-
-/* 审查区域 */
-.review-section {
-  padding: 16px; background: var(--bg-secondary); border: 1px solid var(--border-color);
-  border-top: none; border-radius: 0 0 var(--radius) var(--radius);
-}
-.review-section h4 { font-size: 14px; margin-bottom: 12px; }
-.review-scores { margin-bottom: 12px; }
-.score-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.score-label { font-size: 11px; color: var(--text-secondary); min-width: 70px; }
-.score-bar { flex: 1; height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden; }
-.score-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); border-radius: 3px; transition: width 0.5s ease; }
-.score-value { font-size: 11px; color: var(--text-muted); min-width: 35px; text-align: right; }
-.review-details { display: flex; gap: 16px; }
-.review-col { flex: 1; }
-.review-col h5 { font-size: 12px; margin-bottom: 6px; }
-.review-col ul { list-style: none; padding: 0; }
-.review-col li { font-size: 11px; color: var(--text-secondary); padding: 2px 0 2px 12px; position: relative; }
-.review-col li::before { content: '•'; position: absolute; left: 0; color: var(--accent-blue); }
-
-/* 错误消息 */
-.error-bubble { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--accent-red); max-width: 80%; }
-.error-icon { margin-right: 6px; }
-
-/* 加载动画 */
-.loading-indicator { padding: 12px 0; }
-.loading-agents { display: flex; flex-direction: column; gap: 8px; }
-.loading-agent {
-  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
-  background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border-color);
-}
-.loading-avatar { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-.loading-info { flex: 1; }
-.loading-name { font-size: 12px; font-weight: 600; }
-.loading-status { font-size: 10px; color: var(--text-muted); }
-.loading-spinner { width: 16px; height: 16px; border: 2px solid var(--border-color); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ========== 输入区域 ========== */
-.chat-input-area { padding: 12px 20px; background: var(--bg-secondary); border-top: 1px solid var(--border-color); flex-shrink: 0; }
-.input-wrapper { display: flex; gap: 8px; align-items: flex-end; max-width: 900px; margin: 0 auto; }
-.input-wrapper textarea {
-  flex: 1; padding: 10px 14px; background: var(--bg-primary); border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px; resize: none;
-  outline: none; font-family: inherit; min-height: 40px; max-height: 120px;
-}
-.input-wrapper textarea:focus { border-color: var(--accent-blue); }
-.input-wrapper textarea::placeholder { color: var(--text-muted); }
-.send-btn {
-  padding: 10px 20px; background: var(--accent-blue); color: white; border: none;
-  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: all 0.2s ease; white-space: nowrap;
-}
-.send-btn:hover:not(:disabled) { background: #2563eb; }
-.send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-loading {
-  display: inline-block; width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
-  border-radius: 50%; animation: spin 1s linear infinite;
-}
-.cancel-btn {
-  padding: 10px 16px; background: var(--bg-tertiary); color: var(--accent-red);
-  border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius-sm);
-  font-size: 13px; cursor: pointer; transition: all 0.2s ease;
-}
-.cancel-btn:hover { background: rgba(239,68,68,0.1); }
-
-/* ========== 右侧详情面板 ========== */
-.detail-panel {
-  width: 300px; background: var(--bg-secondary); border-left: 1px solid var(--border-color);
-  display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0;
-}
-.task-detail { padding: 12px; }
-.detail-section { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
-.detail-section h3 { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
-.topic-text { font-size: 14px; font-weight: 600; color: var(--accent-blue); }
-.plan-items { display: flex; flex-direction: column; gap: 8px; }
-.plan-item { display: flex; flex-direction: column; gap: 4px; }
-.plan-label { font-size: 11px; color: var(--text-muted); }
-.plan-value { font-size: 12px; color: var(--text-secondary); }
-.plan-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.tag { font-size: 10px; padding: 2px 8px; background: rgba(99,102,241,0.15); color: var(--accent-indigo); border-radius: 10px; }
-.summary-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; max-height: 120px; overflow-y: auto; }
-.overall-score { font-size: 36px; font-weight: 800; text-align: center; margin: 8px 0; }
-.score-total { font-size: 14px; font-weight: 400; color: var(--text-muted); }
-.review-comment { font-size: 12px; color: var(--text-secondary); text-align: center; }
-.empty-detail { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-.empty-icon { font-size: 32px; margin-bottom: 8px; }
-.empty-detail p { font-size: 12px; }
-
-/* 消息流 */
-.message-flow { border-top: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.flow-list { flex: 1; overflow-y: auto; padding: 8px; }
-.flow-item { display: flex; align-items: flex-start; gap: 6px; padding: 6px 8px; border-radius: 6px; margin-bottom: 4px; font-size: 11px; transition: background 0.2s; }
-.flow-item:hover { background: var(--bg-tertiary); }
-.flow-avatar { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
-.flow-content { flex: 1; min-width: 0; }
-.flow-name { font-weight: 600; color: var(--text-primary); margin-right: 4px; }
-.flow-text { color: var(--text-secondary); }
-.flow-time { font-size: 9px; color: var(--text-muted); flex-shrink: 0; }
-
-/* 滚动条 */
-::-webkit-scrollbar { width: 6px; }
+/* ========== 滚动条 ========== */
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* 响应式 */
-@media (max-width: 1200px) { .detail-panel { display: none; } }
-@media (max-width: 900px) { .agent-panel { display: none; } }
+/* ========== 应用容器 ========== */
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ========== 顶部栏 ========== */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 24px; background: rgba(17,24,39,0.85);
+  backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0; z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 14px; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.logo-info h1 {
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.logo-info p { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.ws-badge {
+  display: flex; align-items: center; gap: 5px; font-size: 11px;
+  color: var(--text-muted); padding: 3px 10px; background: var(--bg-tertiary);
+  border-radius: 20px; border: 1px solid var(--border-color);
+}
+.ws-badge.connected { color: var(--accent-green); border-color: rgba(16,185,129,0.3); }
+.ws-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+.ws-badge.connected .ws-dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+.header-btn {
+  padding: 5px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color);
+  border-radius: 8px; color: var(--text-secondary); font-size: 12px; cursor: pointer;
+  transition: var(--transition); display: flex; align-items: center; gap: 4px;
+}
+.header-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+/* ========== 主体布局 ========== */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* ========== 左侧边栏 ========== */
+.sidebar {
+  width: 260px; background: var(--bg-secondary); border-right: 1px solid var(--border-color);
+  display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+}
+.sidebar-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--border-color);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.sidebar-badge {
+  font-size: 10px; padding: 1px 8px; border-radius: 10px;
+  background: rgba(59,130,246,0.15); color: var(--accent-blue);
+}
+
+/* 智能体列表 */
+.agent-list { padding: 8px; flex: 1; overflow-y: auto; }
+.agent-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px;
+  border-radius: var(--radius-sm); margin-bottom: 2px; transition: var(--transition);
+  position: relative; overflow: hidden;
+}
+.agent-item::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: transparent; border-radius: 0 2px 2px 0; transition: var(--transition);
+}
+.agent-item.active::before { background: var(--accent-blue); }
+.agent-item.active { background: var(--bg-hover); }
+.agent-item:hover { background: var(--bg-hover); }
+.agent-avatar {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0; position: relative;
+}
+.agent-avatar .pulse-ring {
+  position: absolute; inset: -3px; border-radius: 12px;
+  border: 2px solid transparent; animation: none;
+}
+.agent-item.active .pulse-ring { animation: pulseRing 2s infinite; }
+@keyframes pulseRing {
+  0% { border-color: transparent; transform: scale(1); }
+  50% { border-color: var(--accent-blue); transform: scale(1.05); }
+  100% { border-color: transparent; transform: scale(1); }
+}
+.agent-meta { flex: 1; min-width: 0; }
+.agent-name { font-size: 12px; font-weight: 600; margin-bottom: 1px; }
+.agent-desc { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agent-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0;
+}
+.agent-status-dot.thinking { background: var(--accent-indigo); animation: blink 1s infinite; }
+.agent-status-dot.working { background: var(--accent-blue); animation: blink 0.8s infinite; }
+.agent-status-dot.completed { background: var(--accent-green); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* 流程图 */
+.flow-section { border-top: 1px solid var(--border-color); padding: 12px; }
+.flow-title { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.flow-steps { display: flex; flex-direction: column; gap: 0; }
+.flow-step {
+  display: flex; align-items: center; gap: 8px; padding: 6px 0; position: relative;
+}
+.flow-dot {
+  width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0;
+  background: var(--bg-tertiary); color: var(--text-muted); transition: var(--transition);
+  border: 2px solid transparent;
+}
+.flow-step.active .flow-dot { background: var(--accent-blue); color: white; border-color: var(--accent-blue); box-shadow: 0 0 12px rgba(59,130,246,0.4); }
+.flow-step.done .flow-dot { background: var(--accent-green); color: white; border-color: var(--accent-green); }
+.flow-step-label { font-size: 11px; color: var(--text-muted); transition: var(--transition); }
+.flow-step.active .flow-step-label { color: var(--text-primary); font-weight: 600; }
+.flow-step.done .flow-step-label { color: var(--accent-green); }
+.flow-line {
+  position: absolute; left: 9px; top: 26px; width: 2px; height: 14px;
+  background: var(--border-color);
+}
+.flow-step.done .flow-line { background: var(--accent-green); }
+
+/* ========== 中间内容区 ========== */
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* 消息区域 */
+.messages { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* 欢迎页 */
+.welcome { max-width: 680px; margin: 0 auto; text-align: center; padding: 60px 20px 40px; }
+.welcome-icon { font-size: 56px; margin-bottom: 20px; display: block; }
+.welcome h2 {
+  font-size: 26px; margin-bottom: 10px;
+  background: linear-gradient(135deg, #60a5fa, #c084fc, #60a5fa);
+  background-size: 200% auto;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+@keyframes shimmer { to { background-position: 200% center; } }
+.welcome p { color: var(--text-secondary); font-size: 14px; margin-bottom: 36px; line-height: 1.7; }
+
+.features { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 36px; }
+.feat-card {
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); padding: 16px 10px; text-align: center;
+  transition: var(--transition); cursor: default;
+}
+.feat-card:hover { border-color: var(--accent-blue); transform: translateY(-3px); box-shadow: var(--shadow-glow-blue); }
+.feat-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+.feat-card h3 { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+.feat-card p { font-size: 9px; color: var(--text-muted); line-height: 1.4; }
+
+.examples { margin-top: 8px; }
+.ex-label { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.ex-btn {
+  display: inline-block; padding: 7px 16px; margin: 3px; background: var(--bg-card);
+  border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-secondary);
+  font-size: 12px; cursor: pointer; transition: var(--transition);
+}
+.ex-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: rgba(59,130,246,0.08); }
+
+/* 用户消息 */
+.msg { margin-bottom: 20px; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg-user { display: flex; justify-content: flex-end; }
+.msg-user-bubble {
+  max-width: 70%; padding: 10px 16px; background: var(--accent-blue);
+  color: white; border-radius: 16px 16px 4px 16px; font-size: 13px; line-height: 1.6;
+}
+
+/* Agent工作流卡片 */
+.workflow-card {
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
+  animation: fadeIn 0.4s ease; transition: var(--transition);
+}
+.workflow-card.active { border-color: var(--accent-blue); box-shadow: var(--shadow-glow-blue); }
+.workflow-card-header {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  background: rgba(0,0,0,0.15); cursor: pointer; transition: var(--transition);
+}
+.workflow-card-header:hover { background: rgba(0,0,0,0.25); }
+.wf-avatar {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.wf-info { flex: 1; }
+.wf-name { font-size: 13px; font-weight: 600; }
+.wf-status { font-size: 11px; color: var(--text-muted); }
+.wf-spinner {
+  width: 18px; height: 18px; border: 2px solid var(--border-color);
+  border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.wf-check { color: var(--accent-green); font-size: 16px; }
+.wf-expand { color: var(--text-muted); font-size: 12px; transition: var(--transition); }
+.wf-expand.open { transform: rotate(180deg); }
+.workflow-card-body {
+  padding: 0 16px; max-height: 0; overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.3s ease;
+}
+.workflow-card-body.open { max-height: 2000px; padding: 12px 16px 16px; }
+.wf-output {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.7;
+  white-space: pre-wrap; word-break: break-word;
+}
+.wf-output h1,.wf-output h2,.wf-output h3,.wf-output h4 { color: var(--text-primary); margin: 10px 0 6px; }
+.wf-output h2 { font-size: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+.wf-output h3 { font-size: 13px; }
+.wf-output p { margin: 4px 0; }
+.wf-output ul,.wf-output ol { padding-left: 18px; margin: 4px 0; }
+.wf-output li { margin: 2px 0; }
+.wf-output strong { color: var(--text-primary); }
+.wf-output code { background: var(--bg-tertiary); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+/* 报告卡片 */
+.report-card {
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
+  animation: fadeIn 0.5s ease;
+}
+.report-header {
+  display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+  border-bottom: 1px solid var(--border-color);
+}
+.report-icon { font-size: 22px; }
+.report-title { flex: 1; font-size: 15px; font-weight: 700; }
+.report-score-badge {
+  font-size: 13px; font-weight: 700; padding: 3px 12px; border-radius: 12px;
+}
+.score-high { background: rgba(16,185,129,0.2); color: var(--accent-green); }
+.score-mid { background: rgba(245,158,11,0.2); color: var(--accent-orange); }
+.score-low { background: rgba(239,68,68,0.2); color: var(--accent-red); }
+.report-body {
+  padding: 20px; font-size: 13px; line-height: 1.9; max-height: 600px; overflow-y: auto;
+}
+.report-body h1 { font-size: 18px; margin: 16px 0 8px; color: var(--text-primary); }
+.report-body h2 { font-size: 15px; margin: 14px 0 6px; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+.report-body h3 { font-size: 13px; margin: 10px 0 4px; color: var(--text-primary); }
+.report-body p { margin: 6px 0; color: var(--text-secondary); }
+.report-body ul,.report-body ol { padding-left: 20px; margin: 6px 0; }
+.report-body li { margin: 3px 0; color: var(--text-secondary); }
+.report-body strong { color: var(--text-primary); }
+.report-body code { background: var(--bg-tertiary); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+/* 审查区域 */
+.review-section {
+  padding: 16px 18px; border-top: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.1);
+}
+.review-section h4 { font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.review-scores { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.rev-row { display: flex; align-items: center; gap: 8px; }
+.rev-label { font-size: 11px; color: var(--text-secondary); min-width: 65px; }
+.rev-bar { flex: 1; height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden; }
+.rev-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); }
+.rev-val { font-size: 10px; color: var(--text-muted); min-width: 30px; text-align: right; }
+.review-cols { display: flex; gap: 20px; }
+.review-col { flex: 1; }
+.review-col h5 { font-size: 11px; margin-bottom: 6px; color: var(--text-secondary); }
+.review-col ul { list-style: none; padding: 0; }
+.review-col li { font-size: 11px; color: var(--text-secondary); padding: 2px 0 2px 14px; position: relative; }
+.review-col li::before { content: '•'; position: absolute; left: 0; }
+
+/* 错误消息 */
+.msg-error {
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+  border-radius: var(--radius-sm); padding: 10px 14px; color: var(--accent-red); font-size: 13px;
+}
+
+/* ========== 输入区域 ========== */
+.input-area {
+  padding: 14px 24px; background: rgba(17,24,39,0.9);
+  backdrop-filter: blur(20px); border-top: 1px solid var(--border-color); flex-shrink: 0;
+}
+.input-box {
+  display: flex; gap: 8px; align-items: flex-end; max-width: 860px; margin: 0 auto;
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius); padding: 6px 6px 6px 16px;
+  transition: var(--transition);
+}
+.input-box:focus-within { border-color: var(--accent-blue); box-shadow: var(--shadow-glow-blue); }
+.input-box textarea {
+  flex: 1; background: transparent; border: none; color: var(--text-primary);
+  font-size: 13px; resize: none; outline: none; font-family: inherit;
+  min-height: 36px; max-height: 120px; padding: 6px 0; line-height: 1.5;
+}
+.input-box textarea::placeholder { color: var(--text-muted); }
+.input-actions { display: flex; gap: 4px; align-items: center; }
+.send-btn {
+  padding: 8px 18px; background: var(--accent-blue); color: white; border: none;
+  border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: var(--transition); white-space: nowrap; display: flex; align-items: center; gap: 6px;
+}
+.send-btn:hover:not(:disabled) { background: #2563eb; }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.send-spinner {
+  width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+.cancel-btn {
+  padding: 8px 14px; background: transparent; color: var(--accent-red);
+  border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius-sm);
+  font-size: 12px; cursor: pointer; transition: var(--transition);
+}
+.cancel-btn:hover { background: rgba(239,68,68,0.1); }
+
+/* ========== 右侧面板 ========== */
+.detail {
+  width: 320px; background: var(--bg-secondary); border-left: 1px solid var(--border-color);
+  display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+}
+.detail-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--border-color);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.detail-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.detail-body { flex: 1; overflow-y: auto; padding: 12px; }
+.detail-section { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+.detail-section h3 { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.detail-topic { font-size: 14px; font-weight: 600; color: var(--accent-blue); line-height: 1.5; }
+.detail-plan-items { display: flex; flex-direction: column; gap: 6px; }
+.detail-plan-label { font-size: 10px; color: var(--text-muted); }
+.detail-plan-value { font-size: 11px; color: var(--text-secondary); }
+.detail-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.detail-tag { font-size: 10px; padding: 2px 8px; background: rgba(99,102,241,0.12); color: var(--accent-indigo); border-radius: 8px; }
+.detail-summary { font-size: 11px; color: var(--text-secondary); line-height: 1.6; max-height: 100px; overflow-y: auto; }
+.detail-score-big {
+  font-size: 42px; font-weight: 800; text-align: center; margin: 8px 0;
+}
+.detail-score-total { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+.detail-review-comment { font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 4px; }
+.detail-empty { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+.detail-empty-icon { font-size: 36px; margin-bottom: 10px; }
+.detail-empty p { font-size: 12px; }
+
+/* 消息流 */
+.msg-flow { border-top: 1px solid var(--border-color); flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.msg-flow-title { font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 10px 16px 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.msg-flow-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+.flow-msg { display: flex; align-items: flex-start; gap: 6px; padding: 5px 6px; border-radius: 6px; margin-bottom: 2px; font-size: 10px; }
+.flow-msg:hover { background: var(--bg-hover); }
+.flow-msg-avatar { width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+.flow-msg-content { flex: 1; min-width: 0; }
+.flow-msg-name { font-weight: 600; color: var(--text-primary); margin-right: 3px; }
+.flow-msg-text { color: var(--text-secondary); }
+.flow-msg-time { font-size: 8px; color: var(--text-muted); flex-shrink: 0; }
+
+/* ========== 响应式 ========== */
+@media (max-width: 1200px) { .detail { display: none; } }
+@media (max-width: 900px) { .sidebar { display: none; } }
   </style>
 </head>
 <body>
-  <div class="app-container">
-    <!-- 顶部导航 -->
-    <header class="app-header">
-      <div class="header-left">
-        <div class="logo">
-          <span class="logo-icon">🤖</span>
-          <div class="logo-text">
-            <h1>多智能体协作研究助手</h1>
-            <p class="subtitle">Multi-Agent Collaborative Research Assistant</p>
-          </div>
+<div class="app">
+  <!-- 顶部栏 -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-icon">🤖</div>
+        <div class="logo-info">
+          <h1>多智能体协作研究助手</h1>
+          <p>MULTI-AGENT RESEARCH</p>
         </div>
       </div>
-      <div class="header-right">
-        <div class="status-indicator" id="wsStatus">
-          <span class="status-dot"></span>
-          <span id="wsStatusText">未连接</span>
-        </div>
-      </div>
-    </header>
-
-    <div class="main-content">
-      <!-- 左侧：智能体面板 -->
-      <aside class="agent-panel">
-        <h2 class="panel-title">🧠 智能体团队</h2>
-        <div class="agent-list" id="agentList"></div>
-        <div class="pipeline-visual">
-          <h3 class="panel-subtitle">📋 协作流程</h3>
-          <div class="pipeline-steps" id="pipelineSteps"></div>
-        </div>
-      </aside>
-
-      <!-- 中间：聊天区域 -->
-      <main class="chat-area">
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-area">
-          <div class="input-wrapper">
-            <textarea id="inputText" placeholder="输入您想研究的主题，例如：人工智能在医疗领域的应用..." rows="1"></textarea>
-            <button class="send-btn" id="sendBtn" onclick="handleSend()">发送</button>
-            <button class="cancel-btn" id="cancelBtn" style="display:none" onclick="cancelTask()">取消</button>
-          </div>
-        </div>
-      </main>
-
-      <!-- 右侧：任务详情面板 -->
-      <aside class="detail-panel">
-        <h2 class="panel-title">📊 任务详情</h2>
-        <div id="taskDetail">
-          <div class="empty-detail">
-            <div class="empty-icon">📋</div>
-            <p>开始研究后，任务详情将在此显示</p>
-          </div>
-        </div>
-        <div class="message-flow">
-          <h3 class="panel-subtitle">💬 智能体通信</h3>
-          <div class="flow-list" id="flowList"></div>
-        </div>
-      </aside>
     </div>
+    <div class="header-right">
+      <div class="ws-badge" id="wsBadge"><span class="ws-dot"></span><span id="wsText">未连接</span></div>
+      <button class="header-btn" onclick="showHistory()">📋 历史</button>
+      <button class="header-btn" onclick="exportReport()">📥 导出</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- 左侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">智能体团队</span>
+        <span class="sidebar-badge" id="agentCountBadge">5</span>
+      </div>
+      <div class="agent-list" id="agentList"></div>
+      <div class="flow-section">
+        <div class="flow-title">协作流程</div>
+        <div class="flow-steps" id="flowSteps"></div>
+      </div>
+    </aside>
+
+    <!-- 中间内容 -->
+    <main class="content">
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <div class="input-box">
+          <textarea id="inputText" placeholder="输入研究主题，多个智能体将协作完成深度研究报告..." rows="1"></textarea>
+          <div class="input-actions">
+            <button class="cancel-btn" id="cancelBtn" style="display:none" onclick="cancelTask()">取消</button>
+            <button class="send-btn" id="sendBtn" onclick="handleSend()">
+              <span id="sendText">发送</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧面板 -->
+    <aside class="detail">
+      <div class="detail-header">
+        <span class="detail-title">任务详情</span>
+      </div>
+      <div class="detail-body" id="detailBody">
+        <div class="detail-empty">
+          <div class="detail-empty-icon">📋</div>
+          <p>开始研究后，任务详情将在此显示</p>
+        </div>
+      </div>
+      <div class="msg-flow">
+        <div class="msg-flow-title">智能体通信</div>
+        <div class="msg-flow-list" id="flowList"></div>
+      </div>
+    </aside>
   </div>
+</div>
 
 <script>
 // ========== 配置 ==========
-const AGENT_CONFIG = [
-  { type: 'orchestrator', name: '编排器', icon: '🎯', color: '#6366f1' },
-  { type: 'researcher', name: '研究员', icon: '🔍', color: '#3b82f6' },
-  { type: 'analyst', name: '分析师', icon: '📊', color: '#8b5cf6' },
-  { type: 'writer', name: '写作员', icon: '📝', color: '#10b981' },
-  { type: 'reviewer', name: '审查员', icon: '✅', color: '#f59e0b' },
+const AGENTS = [
+  { type:'orchestrator', name:'编排器', icon:'🎯', color:'#6366f1', desc:'任务分解与调度' },
+  { type:'researcher', name:'研究员', icon:'🔍', color:'#3b82f6', desc:'信息收集与整理' },
+  { type:'analyst', name:'分析师', icon:'📊', color:'#8b5cf6', desc:'深度分析与洞察' },
+  { type:'writer', name:'写作员', icon:'📝', color:'#10b981', desc:'报告撰写与整合' },
+  { type:'reviewer', name:'审查员', icon:'✅', color:'#f59e0b', desc:'质量审查与反馈' },
 ];
-
-const STATUS_LABELS = {
-  idle: '待命', thinking: '思考中', working: '工作中',
-  waiting: '等待中', completed: '已完成', error: '异常'
-};
-
-const PIPELINE_STEPS = [
-  { name: '任务分解', desc: '编排器分析需求' },
-  { name: '信息收集', desc: '研究员收集资料' },
-  { name: '深度分析', desc: '分析师提取洞察' },
-  { name: '报告撰写', desc: '写作员生成报告' },
-  { name: '质量审查', desc: '审查员评估质量' },
+const FLOW_STEPS = [
+  { name:'任务分解', agent:'orchestrator' },
+  { name:'信息收集', agent:'researcher' },
+  { name:'深度分析', agent:'analyst' },
+  { name:'报告撰写', agent:'writer' },
+  { name:'质量审查', agent:'reviewer' },
 ];
-
 const EXAMPLES = [
   '人工智能在医疗领域的应用与前景',
   '区块链技术的现状与未来发展趋势',
   '量子计算对信息安全的影响',
   '碳中和背景下的新能源技术发展',
 ];
-
-const DIM_LABELS = {
-  completeness: '内容完整性', coherence: '逻辑连贯性',
-  accuracy: '信息准确性', depth: '分析深度', clarity: '表达清晰度'
-};
+const DIM_LABELS = { completeness:'内容完整性', coherence:'逻辑连贯性', accuracy:'信息准确性', depth:'分析深度', clarity:'表达清晰度' };
 
 // ========== 状态 ==========
-let agents = AGENT_CONFIG.map(a => ({ ...a, status: 'idle', task: null, progress: 0 }));
+let agentStates = {};
+AGENTS.forEach(a => agentStates[a.type] = { status:'idle', task:null, progress:0 });
 let currentStep = -1;
 let loading = false;
 let ws = null;
-let wsConnected = false;
-let agentMessages = [];
+let flowMessages = [];
 let currentTask = null;
+let workflowCards = {};
 
 // ========== 初始化 ==========
 function init() {
   renderAgents();
-  renderPipeline();
+  renderFlowSteps();
   renderWelcome();
-  connectWebSocket();
-
-  document.getElementById('inputText').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  connectWS();
+  document.getElementById('inputText').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   });
 }
 
-// ========== 渲染函数 ==========
+// ========== 渲染 ==========
 function renderAgents() {
-  const container = document.getElementById('agentList');
-  container.innerHTML = agents.map(a => `
-    <div class="agent-card ${a.status !== 'idle' ? 'active' : ''}" id="agent-${a.type}">
-      <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
-      <div class="agent-info">
-        <div class="agent-name">${a.name}</div>
-        <div class="agent-status">
-          <span class="status-badge ${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
-        </div>
-        ${a.task ? `<div class="agent-task">${a.task}</div>` : ''}
-        ${a.status !== 'idle' ? `
-          <div class="agent-progress">
-            <div class="progress-bar"><div class="progress-fill" style="width:${a.progress*100}%"></div></div>
-            <span class="progress-text">${Math.round(a.progress*100)}%</span>
-          </div>` : ''}
+  const el = document.getElementById('agentList');
+  el.innerHTML = AGENTS.map(a => {
+    const s = agentStates[a.type];
+    const isActive = s.status !== 'idle' && s.status !== 'completed';
+    return `<div class="agent-item ${isActive?'active':''}" id="agent-${a.type}">
+      <div class="agent-avatar" style="background:${a.color}">
+        ${a.icon}
+        <div class="pulse-ring" style="border-color:${a.color}"></div>
       </div>
-    </div>
-  `).join('');
+      <div class="agent-meta">
+        <div class="agent-name">${a.name}</div>
+        <div class="agent-desc">${s.task || a.desc}</div>
+      </div>
+      <div class="agent-status-dot ${s.status}" id="dot-${a.type}"></div>
+    </div>`;
+  }).join('');
 }
 
-function renderPipeline() {
-  const container = document.getElementById('pipelineSteps');
-  container.innerHTML = PIPELINE_STEPS.map((s, i) => `
-    <div class="pipeline-step ${currentStep >= i ? 'active' : ''} ${currentStep > i ? 'completed' : ''} ${currentStep === i ? 'current' : ''}">
-      <div class="step-number">${i + 1}</div>
-      <div class="step-info">
-        <div class="step-name">${s.name}</div>
-        <div class="step-desc">${s.desc}</div>
-      </div>
-      ${i < PIPELINE_STEPS.length - 1 ? '<div class="step-connector"></div>' : ''}
-    </div>
-  `).join('');
+function renderFlowSteps() {
+  const el = document.getElementById('flowSteps');
+  el.innerHTML = FLOW_STEPS.map((s, i) => {
+    const cls = currentStep > i ? 'done' : currentStep === i ? 'active' : '';
+    return `<div class="flow-step ${cls}">
+      <div class="flow-dot">${i+1}</div>
+      <span class="flow-step-label">${s.name}</span>
+      ${i < FLOW_STEPS.length-1 ? '<div class="flow-line"></div>' : ''}
+    </div>`;
+  }).join('');
 }
 
 function renderWelcome() {
-  const container = document.getElementById('chatMessages');
-  container.innerHTML = `
-    <div class="welcome-section">
-      <div class="welcome-icon">🔬</div>
-      <h2>欢迎使用多智能体协作研究助手</h2>
-      <p>输入您想研究的主题，多个专业智能体将协作完成深度研究报告</p>
-      <div class="feature-cards">
-        ${AGENT_CONFIG.map(a => `
-          <div class="feature-card">
-            <span class="feature-icon">${a.icon}</span>
-            <h3>${a.name}</h3>
-            <p>${getAgentDesc(a.type)}</p>
-          </div>
-        `).join('')}
+  document.getElementById('messages').innerHTML = `
+    <div class="welcome">
+      <span class="welcome-icon">🔬</span>
+      <h2>多智能体协作研究助手</h2>
+      <p>输入研究主题，5个专业智能体将实时协作完成深度研究报告<br>您可以实时观察每个智能体的思考与工作过程</p>
+      <div class="features">
+        ${AGENTS.map(a => `<div class="feat-card">
+          <span class="feat-icon">${a.icon}</span>
+          <h3>${a.name}</h3>
+          <p>${a.desc}</p>
+        </div>`).join('')}
       </div>
-      <div class="example-prompts">
-        <p class="example-label">试试这些主题：</p>
-        ${EXAMPLES.map(e => `<button class="example-btn" onclick="sendMessage('${e}')">${e}</button>`).join('')}
+      <div class="examples">
+        <div class="ex-label">试试这些主题：</div>
+        ${EXAMPLES.map(e => `<button class="ex-btn" onclick="sendMessage('${e}')">${e}</button>`).join('')}
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
-function getAgentDesc(type) {
-  const descs = {
-    orchestrator: '智能任务分解与调度',
-    researcher: '全面信息收集与整理',
-    analyst: '深度分析与洞察提取',
-    writer: '结构化报告撰写',
-    reviewer: '质量审查与反馈',
-  };
-  return descs[type] || '';
-}
-
-function getScoreClass(score) {
-  if (score >= 80) return 'score-high';
-  if (score >= 60) return 'score-medium';
-  return 'score-low';
-}
-
-function formatTime(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
-}
-
-function scrollToBottom() {
-  const el = document.getElementById('chatMessages');
+function scrollBottom() {
+  const el = document.getElementById('messages');
   el.scrollTop = el.scrollHeight;
   const fl = document.getElementById('flowList');
   fl.scrollTop = fl.scrollHeight;
 }
 
-function addMessage(html) {
-  const container = document.getElementById('chatMessages');
-  // Remove welcome if present
-  const welcome = container.querySelector('.welcome-section');
-  if (welcome) welcome.remove();
-
-  const div = document.createElement('div');
-  div.className = 'message';
-  div.innerHTML = html;
-  container.appendChild(div);
-  scrollToBottom();
+function addMsg(html) {
+  const c = document.getElementById('messages');
+  const w = c.querySelector('.welcome');
+  if (w) w.remove();
+  const d = document.createElement('div');
+  d.className = 'msg';
+  d.innerHTML = html;
+  c.appendChild(d);
+  scrollBottom();
 }
 
-function addFlowMessage(msg) {
-  agentMessages.push(msg);
-  const container = document.getElementById('flowList');
-  const agent = AGENT_CONFIG.find(a => a.type === msg.agent_type) || { icon: '🤖', color: '#666', name: '系统' };
-  const div = document.createElement('div');
-  div.className = 'flow-item';
-  div.innerHTML = `
-    <div class="flow-avatar" style="background:${agent.color}">${agent.icon}</div>
-    <div class="flow-content">
-      <span class="flow-name">${msg.agent_name || agent.name}</span>
-      <span class="flow-text">${msg.content}</span>
-    </div>
-    <span class="flow-time">${formatTime(msg.timestamp)}</span>
-  `;
-  container.appendChild(div);
-  scrollToBottom();
+function addFlowMsg(msg) {
+  flowMessages.push(msg);
+  const a = AGENTS.find(x => x.type === msg.agent_type) || { icon:'🤖', color:'#666', name:'系统' };
+  const c = document.getElementById('flowList');
+  const d = document.createElement('div');
+  d.className = 'flow-msg';
+  const ts = msg.timestamp ? new Date(msg.timestamp) : new Date();
+  d.innerHTML = `<div class="flow-msg-avatar" style="background:${a.color}">${a.icon}</div>
+    <div class="flow-msg-content"><span class="flow-msg-name">${msg.agent_name||a.name}</span><span class="flow-msg-text">${msg.content}</span></div>
+    <span class="flow-msg-time">${ts.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>`;
+  c.appendChild(d);
+  scrollBottom();
 }
 
-function updateAgentState(agentType, data) {
-  const agent = agents.find(a => a.type === agentType);
-  if (agent) {
-    if (data.status) agent.status = data.status;
-    if (data.task) agent.task = data.task;
-    if (data.progress !== undefined) agent.progress = data.progress;
+function updateAgent(type, data) {
+  if (agentStates[type]) {
+    Object.assign(agentStates[type], data);
     renderAgents();
   }
 }
 
 function resetAgents() {
-  agents.forEach(a => { a.status = 'idle'; a.task = null; a.progress = 0; });
+  AGENTS.forEach(a => agentStates[a.type] = { status:'idle', task:null, progress:0 });
   currentStep = -1;
+  workflowCards = {};
   renderAgents();
-  renderPipeline();
+  renderFlowSteps();
 }
 
-function setLoading(isLoading) {
-  loading = isLoading;
-  document.getElementById('sendBtn').disabled = isLoading;
-  document.getElementById('cancelBtn').style.display = isLoading ? 'inline-block' : 'none';
-  document.getElementById('inputText').disabled = isLoading;
-  if (isLoading) {
-    document.getElementById('sendBtn').innerHTML = '<span class="btn-loading"></span>';
-  } else {
-    document.getElementById('sendBtn').innerHTML = '发送';
-  }
+function setLoading(v) {
+  loading = v;
+  document.getElementById('sendBtn').disabled = v;
+  document.getElementById('cancelBtn').style.display = v ? 'inline-block' : 'none';
+  document.getElementById('inputText').disabled = v;
+  document.getElementById('sendText').innerHTML = v ? '<span class="send-spinner"></span>处理中' : '发送';
 }
 
-function updateTaskDetail(task) {
-  currentTask = task;
-  const container = document.getElementById('taskDetail');
-  if (!task) {
-    container.innerHTML = '<div class="empty-detail"><div class="empty-icon">📋</div><p>开始研究后，任务详情将在此显示</p></div>';
-    return;
-  }
+function getScoreClass(s) { return s >= 80 ? 'score-high' : s >= 60 ? 'score-mid' : 'score-low'; }
 
-  let html = '';
-  html += `<div class="detail-section"><h3>🎯 研究主题</h3><p class="topic-text">${task.topic}</p></div>`;
-
-  if (task.taskPlan) {
-    html += `<div class="detail-section"><h3>📋 任务计划</h3><div class="plan-items">`;
-    html += `<div class="plan-item"><span class="plan-label">研究重点</span><span class="plan-value">${task.taskPlan.research_focus || ''}</span></div>`;
-    if (task.taskPlan.analysis_dimensions?.length) {
-      html += `<div class="plan-item"><span class="plan-label">分析维度</span><div class="plan-tags">`;
-      task.taskPlan.analysis_dimensions.forEach(d => { html += `<span class="tag">${d}</span>`; });
-      html += `</div></div>`;
-    }
-    html += `</div></div>`;
-  }
-
-  if (task.researchSummary) {
-    html += `<div class="detail-section"><h3>🔍 研究摘要</h3><p class="summary-text">${task.researchSummary}</p></div>`;
-  }
-
-  if (task.analysisSummary) {
-    html += `<div class="detail-section"><h3>📊 分析摘要</h3><p class="summary-text">${task.analysisSummary}</p></div>`;
-  }
-
-  if (task.review) {
-    html += `<div class="detail-section"><h3>✅ 审查结果</h3>`;
-    html += `<div class="overall-score ${getScoreClass(task.review.total_score)}">${task.review.total_score}<span class="score-total">/100</span></div>`;
-    html += `<p class="review-comment">${task.review.overall_comment || ''}</p></div>`;
-  }
-
-  container.innerHTML = html;
-}
-
-// ========== 简易Markdown渲染 ==========
 function renderMarkdown(text) {
   if (!text) return '';
   return text
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
@@ -625,186 +639,303 @@ function renderMarkdown(text) {
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code>$1</code>')
     .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-    .replace(/\n\n/g, '</p><p>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+    .replace(/<\/ul>\s*<ul>/g, '')
+    .replace(/\n{2,}/g, '</p><p>')
     .replace(/\n/g, '<br>')
-    .replace(/^/, '<p>').replace(/$/, '</p>');
+    .replace(/^/, '<p>').replace(/$/, '</p>')
+    .replace(/<p><\/p>/g, '')
+    .replace(/<p>(<h[1-4]>)/g, '$1')
+    .replace(/(<\/h[1-4]>)<\/p>/g, '$1')
+    .replace(/<p>(<ul>)/g, '$1')
+    .replace(/(<\/ul>)<\/p>/g, '$1');
 }
 
-// ========== 核心逻辑 ==========
-async function sendMessage(text) {
-  if (!text || !text.trim() || loading) return;
+function updateDetail(task) {
+  currentTask = task;
+  const c = document.getElementById('detailBody');
+  if (!task) {
+    c.innerHTML = '<div class="detail-empty"><div class="detail-empty-icon">📋</div><p>开始研究后，任务详情将在此显示</p></div>';
+    return;
+  }
+  let h = '';
+  h += `<div class="detail-section"><h3>🎯 研究主题</h3><p class="detail-topic">${task.topic}</p></div>`;
+  if (task.taskPlan) {
+    h += `<div class="detail-section"><h3>📋 任务计划</h3><div class="detail-plan-items">`;
+    h += `<div><span class="detail-plan-label">研究重点</span><div class="detail-plan-value">${task.taskPlan.research_focus||''}</div></div>`;
+    if (task.taskPlan.analysis_dimensions?.length) {
+      h += `<div><span class="detail-plan-label">分析维度</span><div class="detail-tags">${task.taskPlan.analysis_dimensions.map(d=>`<span class="detail-tag">${d}</span>`).join('')}</div></div>`;
+    }
+    h += `</div></div>`;
+  }
+  if (task.researchSummary) {
+    h += `<div class="detail-section"><h3>🔍 研究摘要</h3><p class="detail-summary">${task.researchSummary}</p></div>`;
+  }
+  if (task.analysisSummary) {
+    h += `<div class="detail-section"><h3>📊 分析摘要</h3><p class="detail-summary">${task.analysisSummary}</p></div>`;
+  }
+  if (task.review) {
+    h += `<div class="detail-section"><h3>✅ 审查结果</h3>`;
+    h += `<div class="detail-score-big ${getScoreClass(task.review.total_score)}">${task.review.total_score}<span class="detail-score-total">/100</span></div>`;
+    h += `<p class="detail-review-comment">${task.review.overall_comment||''}</p></div>`;
+  }
+  c.innerHTML = h;
+}
 
-  const message = text.trim();
+// ========== 工作流卡片 ==========
+function createWorkflowCard(agentType, agentName, description) {
+  const a = AGENTS.find(x => x.type === agentType) || { icon:'🤖', color:'#666' };
+  const id = 'wf-' + agentType;
+  const html = `<div class="workflow-card active" id="${id}">
+    <div class="workflow-card-header" onclick="toggleWfCard('${agentType}')">
+      <div class="wf-avatar" style="background:${a.color}">${a.icon}</div>
+      <div class="wf-info">
+        <div class="wf-name">${agentName}</div>
+        <div class="wf-status" id="wf-status-${agentType}">${description}</div>
+      </div>
+      <div class="wf-spinner" id="wf-spinner-${agentType}"></div>
+      <span class="wf-expand" id="wf-expand-${agentType}">▼</span>
+    </div>
+    <div class="workflow-card-body open" id="wf-body-${agentType}">
+      <div class="wf-output" id="wf-output-${agentType}"><span style="color:var(--text-muted)">工作中...</span></div>
+    </div>
+  </div>`;
+  addMsg(html);
+  workflowCards[agentType] = true;
+}
+
+function updateWorkflowOutput(agentType, output) {
+  const el = document.getElementById('wf-output-' + agentType);
+  if (el) {
+    if (typeof output === 'object') {
+      el.innerHTML = renderMarkdown(JSON.stringify(output, null, 2));
+    } else {
+      el.innerHTML = renderMarkdown(output);
+    }
+  }
+}
+
+function completeWorkflowCard(agentType, message) {
+  const card = document.getElementById('wf-' + agentType);
+  if (card) card.classList.remove('active');
+  const spinner = document.getElementById('wf-spinner-' + agentType);
+  if (spinner) spinner.outerHTML = '<span class="wf-check">✓</span>';
+  const status = document.getElementById('wf-status-' + agentType);
+  if (status) status.textContent = message || '完成';
+  const expand = document.getElementById('wf-expand-' + agentType);
+  if (expand) expand.classList.remove('open');
+  const body = document.getElementById('wf-body-' + agentType);
+  if (body) body.classList.remove('open');
+}
+
+function toggleWfCard(agentType) {
+  const body = document.getElementById('wf-body-' + agentType);
+  const expand = document.getElementById('wf-expand-' + agentType);
+  if (body) body.classList.toggle('open');
+  if (expand) expand.classList.toggle('open');
+}
+
+// ========== SSE流式请求 ==========
+async function sendMessage(text) {
+  if (!text?.trim() || loading) return;
+  const msg = text.trim();
   document.getElementById('inputText').value = '';
   setLoading(true);
   resetAgents();
 
-  addMessage(`
-    <div class="message-content user-message">
-      <div class="message-avatar user-avatar">👤</div>
-      <div class="message-bubble"><div class="message-text">${message}</div></div>
-    </div>
-  `);
-
-  addMessage(`
-    <div class="message-content progress-message">
-      <div class="message-avatar" style="background:#6366f1">🎯</div>
-      <div class="message-bubble progress-bubble">
-        <div class="agent-label">系统</div>
-        <div class="message-text">正在启动多智能体协作流程...</div>
-      </div>
-    </div>
-  `);
+  // 用户消息
+  addMsg(`<div class="msg-user"><div class="msg-user-bubble">${msg}</div></div>`);
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: message, session_id: 'web_' + Date.now() }),
+      body: JSON.stringify({ message: msg, session_id: 'web_' + Date.now() }),
     });
 
-    const data = await response.json();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult = null;
 
-    if (data.status === 'success') {
-      updateTaskDetail({
-        topic: data.topic,
-        taskPlan: data.task_plan,
-        researchSummary: data.research_summary,
-        analysisSummary: data.analysis_summary,
-        review: data.review,
-      });
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-      // 渲染报告
-      const review = data.review || {};
-      let reviewHtml = '';
-      if (review.dimensions) {
-        reviewHtml = `<div class="review-section">
-          <h4>📊 质量评估</h4>
-          <div class="review-scores">
-            ${Object.entries(review.dimensions).map(([k, v]) => `
-              <div class="score-item">
-                <span class="score-label">${DIM_LABELS[k] || k}</span>
-                <div class="score-bar"><div class="score-fill" style="width:${v.score/20*100}%"></div></div>
-                <span class="score-value">${v.score}/20</span>
-              </div>
-            `).join('')}
-          </div>
-          <div class="review-details">
-            ${review.strengths?.length ? `<div class="review-col"><h5>✅ 优点</h5><ul>${review.strengths.map(s=>`<li>${s}</li>`).join('')}</ul></div>` : ''}
-            ${review.suggestions?.length ? `<div class="review-col"><h5>💡 建议</h5><ul>${review.suggestions.map(s=>`<li>${s}</li>`).join('')}</ul></div>` : ''}
-          </div>
-        </div>`;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const event = JSON.parse(line.slice(6));
+            handleEvent(event);
+            if (event.type === 'pipeline_complete') {
+              finalResult = event.result;
+            }
+          } catch (e) {}
+        }
       }
-
-      addMessage(`
-        <div class="message-content report-message">
-          <div class="report-header">
-            <span class="report-icon">📄</span>
-            <h3>研究报告</h3>
-            ${review.total_score ? `<span class="report-score ${getScoreClass(review.total_score)}">${review.total_score}分</span>` : ''}
-          </div>
-          <div class="report-body">${renderMarkdown(data.report)}</div>
-          ${reviewHtml}
-        </div>
-      `);
-    } else {
-      addMessage(`
-        <div class="message-content error-message">
-          <div class="message-bubble error-bubble"><span class="error-icon">⚠️</span>${data.detail || data.error || '处理失败'}</div>
-        </div>
-      `);
     }
+
+    // 处理完成
+    if (finalResult) {
+      addReportCard(finalResult);
+      updateDetail({
+        topic: finalResult.topic,
+        taskPlan: finalResult.task_plan,
+        researchSummary: (finalResult.research_result||'').substring(0, 300),
+        analysisSummary: (finalResult.analysis_result||'').substring(0, 300),
+        review: finalResult.review,
+      });
+    }
+
+    // 标记所有智能体完成
+    AGENTS.forEach(a => updateAgent(a.type, { status:'completed', task:null, progress:1 }));
+    currentStep = 4;
+    renderFlowSteps();
+
   } catch (error) {
-    addMessage(`
-      <div class="message-content error-message">
-        <div class="message-bubble error-bubble"><span class="error-icon">⚠️</span>请求失败: ${error.message}</div>
-      </div>
-    `);
+    addMsg(`<div class="msg-error">⚠️ 请求失败: ${error.message}</div>`);
   } finally {
     setLoading(false);
-    agents.forEach(a => { a.status = 'completed'; a.progress = 1; });
-    currentStep = 4;
-    renderAgents();
-    renderPipeline();
-    scrollToBottom();
+    scrollBottom();
   }
 }
 
+function handleEvent(event) {
+  const type = event.type;
+  const agentType = event.agent_type;
+
+  switch (type) {
+    case 'pipeline_start':
+      addFlowMsg({ agent_type:'orchestrator', agent_name:'系统', content: event.message, timestamp: event.timestamp });
+      break;
+
+    case 'agent_start':
+      // 更新流程步骤
+      const stepIdx = FLOW_STEPS.findIndex(s => s.agent === agentType);
+      if (stepIdx >= 0) { currentStep = stepIdx; renderFlowSteps(); }
+      // 更新智能体状态
+      updateAgent(agentType, { status:'working', task: event.description || event.message, progress: event.progress || 0 });
+      // 创建工作流卡片
+      createWorkflowCard(agentType, event.agent_name, event.description || event.message);
+      addFlowMsg({ agent_type: agentType, agent_name: event.agent_name, content: event.message, timestamp: event.timestamp });
+      break;
+
+    case 'agent_output':
+      // 更新工作流卡片输出
+      updateWorkflowOutput(agentType, event.output);
+      // 完成卡片
+      completeWorkflowCard(agentType, event.message);
+      updateAgent(agentType, { status:'completed', task:null, progress: event.progress || 1 });
+      addFlowMsg({ agent_type: agentType, agent_name: event.agent_name, content: event.message, timestamp: event.timestamp });
+      break;
+
+    case 'pipeline_complete':
+      addFlowMsg({ agent_type:'orchestrator', agent_name:'系统', content: '✅ ' + event.message, timestamp: event.timestamp });
+      break;
+
+    case 'pipeline_error':
+      addMsg(`<div class="msg-error">⚠️ ${event.message}</div>`);
+      addFlowMsg({ agent_type:'orchestrator', agent_name:'系统', content: '❌ ' + event.message, timestamp: event.timestamp });
+      break;
+  }
+  scrollBottom();
+}
+
+function addReportCard(result) {
+  const review = result.review || {};
+  let reviewHtml = '';
+  if (review.dimensions) {
+    reviewHtml = `<div class="review-section">
+      <h4>📊 质量评估</h4>
+      <div class="review-scores">
+        ${Object.entries(review.dimensions).map(([k,v]) => `
+          <div class="rev-row">
+            <span class="rev-label">${DIM_LABELS[k]||k}</span>
+            <div class="rev-bar"><div class="rev-fill" style="width:${v.score/20*100}%"></div></div>
+            <span class="rev-val">${v.score}/20</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="review-cols">
+        ${review.strengths?.length ? `<div class="review-col"><h5>✅ 优点</h5><ul>${review.strengths.map(s=>`<li>${s}</li>`).join('')}</ul></div>` : ''}
+        ${review.suggestions?.length ? `<div class="review-col"><h5>💡 建议</h5><ul>${review.suggestions.map(s=>`<li>${s}</li>`).join('')}</ul></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  addMsg(`<div class="report-card">
+    <div class="report-header">
+      <span class="report-icon">📄</span>
+      <span class="report-title">研究报告</span>
+      ${review.total_score ? `<span class="report-score-badge ${getScoreClass(review.total_score)}">${review.total_score}分</span>` : ''}
+    </div>
+    <div class="report-body">${renderMarkdown(result.report||'')}</div>
+    ${reviewHtml}
+  </div>`);
+}
+
 function handleSend() {
-  const text = document.getElementById('inputText').value;
-  sendMessage(text);
+  sendMessage(document.getElementById('inputText').value);
 }
 
 async function cancelTask() {
-  try { await fetch('/api/cancel', { method: 'POST' }); } catch {}
+  try { await fetch('/api/cancel', { method:'POST' }); } catch {}
   setLoading(false);
   resetAgents();
 }
 
-// ========== WebSocket ==========
-function connectWebSocket() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws`;
-
-  ws = new WebSocket(wsUrl);
-
-  ws.onopen = () => {
-    wsConnected = true;
-    document.getElementById('wsStatus').classList.add('connected');
-    document.getElementById('wsStatusText').textContent = '已连接';
-  };
-
-  ws.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'agent_message') {
-        const msg = data.data;
-        addFlowMessage(msg);
-
-        if (msg.agent_type) {
-          const stepMap = { orchestrator: 0, researcher: 1, analyst: 2, writer: 3, reviewer: 4 };
-          const step = stepMap[msg.agent_type];
-          if (step !== undefined && step > currentStep) {
-            currentStep = step;
-            renderPipeline();
-          }
-
-          if (msg.metadata?.status) {
-            updateAgentState(msg.agent_type, {
-              status: msg.metadata.status,
-              progress: msg.metadata.progress || 0,
-            });
-          }
-
-          if (msg.message_type === 'progress' && msg.content) {
-            addMessage(`
-              <div class="message-content progress-message">
-                <div class="message-avatar" style="background:${(AGENT_CONFIG.find(a=>a.type===msg.agent_type)||{}).color||'#666'}">${(AGENT_CONFIG.find(a=>a.type===msg.agent_type)||{}).icon||'🤖'}</div>
-                <div class="message-bubble progress-bubble">
-                  <div class="agent-label">${msg.agent_name}</div>
-                  <div class="message-text">${msg.content}</div>
-                </div>
-              </div>
-            `);
-            updateAgentState(msg.agent_type, { task: msg.content });
-          }
-        }
-      }
-    } catch (e) { console.error('WebSocket消息解析错误:', e); }
-  };
-
-  ws.onclose = () => {
-    wsConnected = false;
-    document.getElementById('wsStatus').classList.remove('connected');
-    document.getElementById('wsStatusText').textContent = '未连接';
-    setTimeout(connectWebSocket, 3000);
-  };
-
-  ws.onerror = () => { wsConnected = false; };
+async function exportReport() {
+  if (!currentTask) { alert('请先完成一次研究'); return; }
+  // 从当前页面提取报告内容
+  const reportBody = document.querySelector('.report-body');
+  if (!reportBody) { alert('暂无报告可导出'); return; }
+  const text = reportBody.innerText;
+  const blob = new Blob([`# ${currentTask.topic}\n\n${text}`], { type:'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'research_report.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
-// 启动
+async function showHistory() {
+  try {
+    const r = await fetch('/api/history');
+    const data = await r.json();
+    if (!data.history?.length) { alert('暂无研究历史'); return; }
+    const list = data.history.map((h,i) => `${i+1}. ${h.topic} (评分: ${h.review_score||'N/A'})`).join('\n');
+    alert('研究历史：\n\n' + list);
+  } catch { alert('获取历史失败'); }
+}
+
+// ========== WebSocket ==========
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+  ws.onopen = () => {
+    document.getElementById('wsBadge').classList.add('connected');
+    document.getElementById('wsText').textContent = '已连接';
+  };
+  ws.onclose = () => {
+    document.getElementById('wsBadge').classList.remove('connected');
+    document.getElementById('wsText').textContent = '未连接';
+    setTimeout(connectWS, 3000);
+  };
+  ws.onerror = () => {};
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'agent_message') {
+        addFlowMsg(data.data);
+      }
+    } catch {}
+  };
+}
+
 init();
 </script>
 </body>
