@@ -56,14 +56,39 @@ class BaseAgent(ABC):
         except Exception as e:
             print(f"Message bus publish error in _update_status: {e}")
 
-    async def _think(self, prompt: str, temperature: float = 0.7) -> str:
-        """调用LLM进行思考"""
+    async def _think(self, prompt: str, temperature: float = 0.7, max_retries: int = 2) -> str:
+        """调用LLM进行思考，内置内容过滤重试机制"""
         messages = [
             {"role": "system", "content": self._system_prompt},
             {"role": "user", "content": prompt},
         ]
-        result = await llm_client.chat(messages, temperature=temperature)
-        return result
+
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                result = await llm_client.chat(messages, temperature=temperature)
+                return result
+            except Exception as e:
+                last_error = e
+                err_str = str(e)
+                # 检测是否为内容过滤错误(400 + contentFilter)
+                if "400" in err_str or "contentFilter" in err_str or "1301" in err_str:
+                    if attempt < max_retries:
+                        # 重试时在system prompt前追加安全约束
+                        safety_instruction = (
+                            "\n\n【重要安全约束】\n"
+                            "你只能输出客观、学术性的研究内容。"
+                            "禁止输出任何涉及暴力、政治敏感、成人内容或可能引起争议的观点。"
+                            "所有分析必须基于事实和学术研究，保持中立客观。"
+                        )
+                        messages[0]["content"] = self._system_prompt + safety_instruction
+                        # 降低温度使输出更稳定
+                        temperature = min(temperature * 0.8, 0.3)
+                        continue
+                # 非内容过滤错误直接抛出
+                raise
+
+        raise Exception(f"LLM调用失败(已重试{max_retries}次): {last_error}")
 
     async def _publish_result(self, content: str, message_type: MessageType = MessageType.TASK_RESULT):
         """发布任务结果"""
